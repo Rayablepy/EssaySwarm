@@ -1,0 +1,108 @@
+{
+  // Display name for this crew
+  "name": "EssaySwarm",
+
+  // Agents to include — each must have a matching agents/<name>.jsonc file
+  "agents": ["leader", "researcher", "writer", "marker"],
+
+  // Task definitions — executed in order for sequential process
+  "tasks": [
+    {
+      // Task identifier
+      "name": "plan_essay",
+
+      // What the task should accomplish
+      "description": "Read the user's request for an essay on {topic} ({essay_type}, about {word_count} words). Produce two things: a research brief listing the specific resources the researcher should gather and scrape, and an essay problem statement for the writer. The research brief must include key questions, source types, suggested search terms, and what must be verified. The problem statement must state the central question the essay will answer, the scope or stance, and the criteria for a successful essay.",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A structured brief with two sections: 'Research Resources' (source types, key questions, search terms, verification targets) and 'Essay Problem Statement' (central question, scope, required argument, success criteria). Do not write the essay.",
+
+      // Which agent handles this task
+      "agent": "leader"
+    },
+    {
+      // Task identifier
+      "name": "research_sources",
+
+      // What the task should accomplish
+      "description": "Using the research brief provided by the Leader, use your tools to find, scrape, and verify sources on {topic}. Prioritize primary and reputable sources, record each source's title, author or publisher, date, and URL, and extract the facts, quotes, and figures needed to support the essay problem statement. Note conflicting evidence and any gaps.",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A citation-ready research packet: for each source, its title, author or publisher, date, URL, a short summary, and the specific facts or quotes it supports. Include key findings mapped to the essay problem statement and any caveats or conflicting evidence.",
+
+      // Which agent handles this task
+      "agent": "researcher"
+    },
+    {
+      // Task identifier
+      "name": "write_essay",
+
+      // What the task should accomplish
+      "description": "Write a {essay_type} essay of about {word_count} words on {topic}. Answer the problem statement provided by the Leader using only the sources supplied by the Researcher. Include a clear thesis, a logical introduction, body, and conclusion, and cite sources inline. Meet these criteria: {criteria}",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A complete, polished {essay_type} essay of approximately {word_count} words with a title, a clear thesis, coherent paragraphs, inline citations to the provided sources, and a conclusion. Every factual claim must be supported by a provided source.",
+
+      // Which agent handles this task
+      "agent": "writer"
+    },
+    {
+      // Task identifier
+      "name": "review_essay",
+
+      // What the task should accomplish
+      "description": "Review the essay written by the Writer against the essay problem statement, the assigned topic ({topic}), the requested length ({word_count} words), and these criteria: {criteria}. Judge the essay against those parameters, quote specific passages to support every judgment, and flag unsupported claims, off-topic material, structural problems, and citation errors.",
+
+      // Clear definition of what the output should look like
+      "expected_output": "A structured review with an overall verdict (pass or revise), a criterion-by-criterion assessment quoting evidence from the essay, a list of concrete issues ordered by severity, and specific revision recommendations. Do not rewrite the essay.",
+
+      // Which agent handles this task
+      "agent": "marker"
+    }
+  ],
+
+  // Execution process
+  // "sequential" — tasks run in order, each receiving prior task outputs
+  // "hierarchical" — a manager agent delegates tasks (requires manager_llm)
+  "process": "sequential",
+
+  // Enable verbose logging during execution
+  "verbose": true,
+
+  // Enable crew memory — persists context and learnings across tasks
+  "memory": true,
+
+  // Automatically plan the execution strategy before running tasks
+  // "planning": false,
+
+  // LLM for the planning step (used when planning is true)
+  // "planning_llm": "openai/gpt-4o",
+
+  // LLM for the manager agent (required when process is "hierarchical")
+  // "manager_llm": "openai/gpt-4o",
+
+  // Crew-level LLM fields also accept object form for custom endpoints
+  // "chat_llm": {"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"},
+
+  // Advanced crew options:
+  // Docs: https://docs.crewai.com/concepts/crews
+  // For hierarchical crews, manager_agent can reference an agents/<name>.jsonc file
+  // that is not included in the "agents" list.
+  // "manager_agent": "writer",
+  // "before_kickoff_callbacks": [{"python": "my_project.callbacks.before_kickoff"}],
+  // "after_kickoff_callbacks": [{"python": "my_project.callbacks.after_kickoff"}],
+  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "max_rpm": null,
+  // "cache": true,
+  // "knowledge_sources": [],
+  // "embedder": {},
+  // "output_log_file": "crew.log",
+  // "stream": false,
+  // "tracing": false,
+  // "security_config": {},
+
+  // Optional runtime input defaults.
+  // This crew uses the inputs: topic, essay_type, word_count, criteria.
+  // `crewai run` prompts for any placeholders missing from this object.
+  "inputs": {}
+}
