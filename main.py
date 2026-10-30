@@ -1,13 +1,21 @@
 import os
 
 from crewai import Crew
+from crewai.llm import LLM
 from tasks import EssaySwarmTasks
 from agents import EssaySwarmAgents
 from server import start
+from config import MODEL,PORT,TIMEOUT,LOG_LEVEL
 
 def main():
-    start()
-    agents=EssaySwarmAgents(MODEL)
+    start(MODEL,PORT,TIMEOUT,LOG_LEVEL)
+    model = LLM(
+        model=MODEL,
+        custom_openai=True,
+        base_url=f"http://localhost:{PORT}/v1",
+        api_key="local_key"
+    )
+    agents=EssaySwarmAgents(model)
     tasks=EssaySwarmTasks()
     topic=str(input("Enter essay topic: "))
     leader=agents.leader()

@@ -8,7 +8,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-import click
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent
@@ -26,43 +25,10 @@ def healthy(url: str) -> bool:
 def resolve(name: str) -> str:
     path = shutil.which(name)
     if path is None:
-        raise click.ClickException(
+        raise RuntimeError(
             f"{name} not found on PATH. Run this via: uv run python main.py"
         )
     return path
-
-
-@click.command()
-@click.option(
-    "--model",
-    envvar="MODEL",
-    show_envvar=True,
-    default="Qwen/Qwen3-4B-Instruct-2507",
-    help="Model to preload and serve.",
-)
-@click.option(
-    "--port",
-    envvar="PORT",
-    show_envvar=True,
-    default=8000,
-    type=int,
-    help="Port for the model server.",
-)
-@click.option(
-    "--timeout",
-    envvar="TIMEOUT",
-    show_envvar=True,
-    default=1800,
-    type=int,
-    help="Seconds to wait for the model to become ready.",
-)
-@click.option(
-    "--log-level",
-    envvar="LOG_LEVEL",
-    show_envvar=True,
-    default="info",
-    help="Log level for the model server.",
-)
 def start(model: str, port: int, timeout: int, log_level: str) -> None:
     health_url = f"http://localhost:{port}/health"
     server = None
@@ -70,7 +36,7 @@ def start(model: str, port: int, timeout: int, log_level: str) -> None:
     def shutdown(*_) -> None:
         if server is None or server.poll() is not None:
             return
-        click.echo(f"Stopping model server (pid {server.pid})")
+        print(f"Stopping model server (pid {server.pid})")
         try:
             if os.name == "posix":
                 os.killpg(os.getpgid(server.pid), signal.SIGTERM)
@@ -87,7 +53,7 @@ def start(model: str, port: int, timeout: int, log_level: str) -> None:
                 server.kill()
 
     try:
-        click.echo(f"Starting model server for {model} on port {port}")
+        print(f"Starting model server for {model} on port {port}")
         server = subprocess.Popen(
             [
                 resolve("transformers"), "serve", model,
@@ -98,23 +64,22 @@ def start(model: str, port: int, timeout: int, log_level: str) -> None:
         )
         signal.signal(signal.SIGTERM, shutdown)
 
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + int(timeout)
         elapsed = 0
         while not healthy(health_url):
             if server.poll() is not None:
-                click.echo(
+                print(
                     f"Model server exited with code {server.returncode} before becoming ready.",
-                    err=True,
                 )
                 sys.exit(1)
             if time.monotonic() > deadline:
-                click.echo(f"Timed out after {timeout}s waiting for {health_url}", err=True)
+                print(f"Timed out after {timeout}s waiting for {health_url}")
                 sys.exit(1)
             if elapsed % 15 == 0:
-                click.echo(f"loading model... {elapsed}s")
+                print(f"loading model... {elapsed}s")
             time.sleep(1)
             elapsed += 1
-        click.echo("Model ready.")
+        print("Model ready.")
     except KeyboardInterrupt:
         sys.exit(130)
 
