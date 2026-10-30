@@ -1,88 +1,75 @@
-import os
-import shutil
-import signal
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 ROOT = Path(__file__).resolve().parent
 
-load_dotenv(ROOT / ".env")
 
-def healthy(url: str) -> bool:
+def healthy(port):
     try:
-        with urllib.request.urlopen(url, timeout=2) as response:
-            return response.status == 200
-    except (urllib.error.URLError, OSError):
+        with urllib.request.urlopen(f"http://localhost:{port}/health", timeout=2):
+            return True
+    except OSError:
         return False
 
+class ModelServer:
+    def __init__(self, model, port, timeout, log_level):
+        self.model = model
+        self.port = int(port)
+        self.timeout = int(timeout)
+        self.log_level = log_level
+        self.process = None
 
-def resolve(name: str) -> str:
-    path = shutil.which(name)
-    if path is None:
-        raise RuntimeError(
-            f"{name} not found on PATH. Run this via: uv run python main.py"
-        )
-    return path
-def start(model: str, port: int, timeout: int, log_level: str) -> None:
-    health_url = f"http://localhost:{port}/health"
-    server = None
+    @property
+    def v1_url(self):
+        return f"http://localhost:{self.port}/v1"
 
-    def shutdown(*_) -> None:
-        if server is None or server.poll() is not None:
-            return
-        print(f"Stopping model server (pid {server.pid})")
-        try:
-            if os.name == "posix":
-                os.killpg(os.getpgid(server.pid), signal.SIGTERM)
-            else:
-                server.terminate()
-        except (ProcessLookupError, PermissionError):
-            pass
-        try:
-            server.wait(timeout=30)
-        except subprocess.TimeoutExpired:
-            if os.name == "posix":
-                os.killpg(os.getpgid(server.pid), signal.SIGKILL)
-            else:
-                server.kill()
+    def start(self):
+        if healthy(self.port):
+            return self
 
-    try:
-        print(f"Starting model server for {model} on port {port}")
-        server = subprocess.Popen(
+        self.process = subprocess.Popen(
             [
-                resolve("transformers"), "serve", model,
-                "--port", str(port), "--log-level", log_level,
+                sys.executable,
+                "-m",
+                "transformers.cli.transformers",
+                "serve",
+                self.model,
+                "--port",
+                str(self.port),
+                "--log-level",
+                self.log_level,
             ],
             cwd=ROOT,
-            start_new_session=(os.name == "posix"),
         )
-        signal.signal(signal.SIGTERM, shutdown)
 
-        deadline = time.monotonic() + int(timeout)
-        elapsed = 0
-        while not healthy(health_url):
-            if server.poll() is not None:
-                print(
-                    f"Model server exited with code {server.returncode} before becoming ready.",
-                )
-                sys.exit(1)
-            if time.monotonic() > deadline:
-                print(f"Timed out after {timeout}s waiting for {health_url}")
-                sys.exit(1)
-            if elapsed % 15 == 0:
-                print(f"loading model... {elapsed}s")
+        deadline = time.monotonic() + self.timeout
+        while not healthy(self.port):
+            if self.process.poll() is not None or time.monotonic() > deadline:
+                self.stop()
+                raise RuntimeError(f"Model server failed to start on port {self.port}")
             time.sleep(1)
-            elapsed += 1
-        print("Model ready.")
-    except KeyboardInterrupt:
-        sys.exit(130)
+        return self
+
+    def stop(self):
+        if self.process and self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+
+    def __enter__(self):
+        return self.start()
+
+    def __exit__(self, *_):
+        self.stop()
 
 
 if __name__ == "__main__":
-    start()
+    from config import LOG_LEVEL, MODEL, PORT, TIMEOUT
+
+    with ModelServer(MODEL, PORT, TIMEOUT, LOG_LEVEL):
+        input("Press Enter to stop the model server")
