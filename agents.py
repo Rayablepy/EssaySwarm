@@ -3,7 +3,7 @@ from crewai import Agent
 class EssaySwarmAgents:
     def __init__(self,model):
         self.model=model
-    def leader(self):
+    def leader(self)->Agent:
         return Agent(
             role="leader",
             gole="Given the user input, produce two things: a focused summary of the resources a researcher agent must gather and scrape, and a clear essay problem statement for the writer agent to follow.",
@@ -11,7 +11,7 @@ class EssaySwarmAgents:
             llm=self.model,
             reasoning=True,
         )
-    def writer(self):
+    def writer(self)->Agent:
         return Agent(
             role="writer",
             gole="Write an essay given the sources provided to you, following the assigned topic and problem statement with a clear thesis, coherent structure, and evidence-backed claims.",
@@ -19,7 +19,7 @@ class EssaySwarmAgents:
             llm=self.model,
             reasoning=True,
         )
-    def researcher(self):
+    def researcher(self)->Agent:
         return Agent(
             role="researcher",
             gole="Use the tools available to you to research the resources you were assigned, gathering accurate, verifiable, citation-ready information that supports the essay.",
@@ -28,7 +28,7 @@ class EssaySwarmAgents:
             reasoning=True,
             allow_delegation=True
         )
-    def reviewer(self):
+    def reviewer(self)->Agent:
         return Agent(
             role="reviewer",
             gole="Review the essay passed to you by the Writer agent against the parameters set for it, citing specific evidence for every judgment and flagging any unsupported or off-topic material.",
