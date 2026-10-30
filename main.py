@@ -1,13 +1,15 @@
+import os
+
 from crewai import Crew
 from tasks import EssaySwarmTasks
 from agents import EssaySwarmAgents
-from server import MODEL
-agents=EssaySwarmAgents(MODEL)
-tasks=EssaySwarmTasks()
+from server import start
 
 def main():
+    start()
+    agents=EssaySwarmAgents(MODEL)
+    tasks=EssaySwarmTasks()
     topic=str(input("Enter essay topic: "))
-
     leader=agents.leader()
     writer=agents.writer()
     researcher=agents.researcher()

@@ -117,8 +117,6 @@ def start(model: str, port: int, timeout: int, log_level: str) -> None:
         click.echo("Model ready.")
     except KeyboardInterrupt:
         sys.exit(130)
-    finally:
-        shutdown()
 
 
 if __name__ == "__main__":
